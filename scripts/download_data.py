@@ -89,7 +89,16 @@ def main() -> None:
         use_cookies=False,
         skip_download=True,
     )
-    print(f"Discovered {len(manifest)} Drive entries")
+    discovered_entries = len(manifest)
+    manifest = [
+        item
+        for item in manifest
+        if Path(item.path).suffix.lower() in IMAGE_EXTENSIONS
+    ]
+    print(
+        f"Discovered {discovered_entries} Drive entries; "
+        f"downloading {len(manifest)} image files"
+    )
 
     def fetch(item):
         destination = Path(item.local_path)
@@ -147,4 +156,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
