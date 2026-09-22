@@ -1,0 +1,97 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper,margin=0.58in]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\newcommand{\todo}[1]{\textcolor{red}{[REPLACE: #1]}}
+
+\title{\vspace{-1.3em}ITCS 6169/8169 Assignment 1: The CNN Challenge}
+\author{\todo{Name}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.1em}
+
+\textbf{Code and checkpoint.}
+\href{\todo{GitHub URL}}{\todo{GitHub repository}}. The repository contains
+the exact configuration, split, code, environment record, and checkpoint used
+for the result below.
+
+\section*{Final result and validation strategy}
+The selected model achieved \textbf{\todo{test accuracy}} on the labeled test
+set. It was selected using a fixed, class-stratified 80/20 split of the 2,400
+provided training images (1,920 train and 480 validation images; seed 0). The
+selected checkpoint obtained \textbf{\todo{validation accuracy}} validation
+accuracy at epoch \todo{best epoch}. The test set was not used for model or
+hyperparameter selection.
+
+\section*{Final recipe}
+The final classifier was \todo{CNN architecture} initialized from
+\todo{pretraining dataset or ``random initialization''}. Images were processed
+at \todo{resolution} using \todo{augmentation summary}. I trained with
+\todo{optimizer}, batch size \todo{batch size}, initial backbone/head learning
+rates \todo{learning rates}, \todo{schedule}, weight decay \todo{weight decay},
+and label smoothing \todo{value}. \todo{Explain which one or two choices mattered
+most, using validation evidence rather than listing settings.}
+
+\section*{Experimental journey}
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}lXrr@{}}
+\toprule
+Experiment & Controlled change and observation & Val. acc. & Time \\
+\midrule
+Starter TNet & Grayscale $64\times64$ sanity-check baseline. & \todo{--} & \todo{--} \\
+Linear probe & ImageNet ResNet-18; classifier trained with frozen backbone. & \todo{--} & \todo{--} \\
+Fine-tuning & Unfroze backbone after three epochs; basic augmentation. & \todo{--} & \todo{--} \\
+Augmentation & Changed only the augmentation profile from basic to strong. & \todo{--} & \todo{--} \\
+Final model & \todo{Final architecture/change and concise observation.} & \todo{--} & \todo{--} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section*{Failure analysis}
+I expected \todo{failed experiment} to help because \todo{hypothesis}. Instead,
+validation accuracy \todo{what happened}, while the learning curves showed
+\todo{diagnostic evidence}. This suggests \todo{lesson and resulting decision}.
+This experiment was not selected based on its test-set behavior.
+
+\section*{Error analysis}
+The final confusion matrix showed that \todo{difficult/confused classes and
+counts}. Visual inspection suggests \todo{plausible image-level reason}. A
+remaining limitation is \todo{limitation}, which could be tested in future work
+with \todo{controlled follow-up}.
+
+\section*{AI + human}
+\todo{One example where an AI coding assistant helped and one where my
+judgment was needed.}
+
+\section*{Reproducibility}
+The final run can be reproduced with:
+\begin{verbatim}
+python train.py --config configs/FINAL_CONFIG.yaml
+python evaluate.py --checkpoint runs/FINAL/best.pt \
+  --data-root data --output-dir runs/FINAL/test_evaluation
+\end{verbatim}
+Software versions, seed, class order, resolved configuration, and split indices
+are stored with the run artifacts.
+
+\newpage
+\section*{References}
+\small
+K. He et al., ``Deep Residual Learning for Image Recognition,'' CVPR, 2016.
+
+M. Tan and Q. Le, ``EfficientNet: Rethinking Model Scaling for Convolutional
+Neural Networks,'' ICML, 2019.
+
+PyTorch and torchvision documentation, versions recorded in the repository.
+
+\end{document}
+
