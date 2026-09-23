@@ -81,6 +81,14 @@ These commands may run concurrently only when the listed GPUs are otherwise
 idle. Places365 weights come from the official CSAILVision Places365 release;
 document this pretraining source in the report.
 
+The same six commands can be launched into separate GNU Screen sessions with:
+
+```bash
+bash scripts/run_high_accuracy.sh
+screen -ls
+tail -f logs/a1_places50.screen.log
+```
+
 To keep a run alive after disconnecting:
 
 ```bash
