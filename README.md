@@ -64,6 +64,23 @@ CUDA_VISIBLE_DEVICES=0 python -u train.py --config configs/resnet18_finetune_str
 CUDA_VISIBLE_DEVICES=0 python -u train.py --config configs/efficientnet_b0_finetune.yaml
 ```
 
+Higher-capacity and domain-matched CNN experiments are also provided. The two
+Places365 models are especially relevant because Places365 pretraining is for
+scene recognition rather than object recognition:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -u train.py --config configs/places365_resnet18_finetune.yaml
+CUDA_VISIBLE_DEVICES=1 python -u train.py --config configs/places365_resnet50_finetune.yaml
+CUDA_VISIBLE_DEVICES=2 python -u train.py --config configs/convnext_base_finetune.yaml
+CUDA_VISIBLE_DEVICES=3 python -u train.py --config configs/regnet_y_32gf_swag_finetune.yaml
+CUDA_VISIBLE_DEVICES=4 python -u train.py --config configs/resnext101_64x4d_finetune.yaml
+CUDA_VISIBLE_DEVICES=5 python -u train.py --config configs/wide_resnet101_2_finetune.yaml
+```
+
+These commands may run concurrently only when the listed GPUs are otherwise
+idle. Places365 weights come from the official CSAILVision Places365 release;
+document this pretraining source in the report.
+
 To keep a run alive after disconnecting:
 
 ```bash
@@ -107,6 +124,39 @@ column -s, -t < runs/experiment_summary.csv
 Choose the final model using validation accuracy and the training curves. Do
 not use the test set to choose hyperparameters.
 
+An ensemble can be selected on validation data without touching the test set.
+For example:
+
+```bash
+python ensemble.py \
+  --checkpoints \
+    runs/convnext_tiny_finetune/best.pt \
+    runs/regnet_y_16gf_swag_finetune/best.pt \
+  --data-root dataset \
+  --split val \
+  --tta-horizontal \
+  --output-dir runs/ensemble_convnext_regnet/validation
+```
+
+Use fixed equal weights unless a weighting rule was specified before examining
+the test set. Report both component models and the ensemble rule.
+
+After selecting a recipe, it is permissible to refit that fixed recipe on all
+2,400 training images. The epoch count should come from the corresponding
+validation run, not from test performance. Example:
+
+```bash
+python refit.py \
+  --config configs/convnext_tiny_finetune.yaml \
+  --development-checkpoint runs/convnext_tiny_finetune/best.pt \
+  --run-name convnext_tiny_full_train \
+  --epochs 9 \
+  --data-root dataset
+```
+
+The refit checkpoint is `runs/convnext_tiny_full_train/final.pt`. Preserve the
+development checkpoint and its validation accuracy as model-selection evidence.
+
 ## 5. Final labeled-test evaluation
 
 Run this once for the selected checkpoint:
@@ -143,4 +193,3 @@ Before submission, update `AI_USAGE.md`, fill `report/report.tex` with measured
 results only, add the GitHub repository URL, and commit the split, summaries,
 selected lightweight result files, and documentation. Do not commit the data or
 large checkpoints; upload the final checkpoint separately and link it.
-

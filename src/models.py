@@ -7,6 +7,12 @@ import torch.nn as nn
 from torchvision import models
 
 
+PLACES365_URLS = {
+    "resnet18": "http://places2.csail.mit.edu/models_places365/resnet18_places365.pth.tar",
+    "resnet50": "http://places2.csail.mit.edu/models_places365/resnet50_places365.pth.tar",
+}
+
+
 class TNet(nn.Module):
     """The deliberately weak grayscale CNN from the starter notebook."""
 
@@ -61,14 +67,50 @@ def build_model(
         "resnet18",
         "resnet50",
         "efficientnet_b0",
+        "efficientnet_v2_s",
+        "efficientnet_v2_m",
+        "efficientnet_v2_l",
         "mobilenet_v3_small",
         "convnext_tiny",
+        "convnext_small",
+        "convnext_base",
+        "convnext_large",
+        "regnet_y_16gf",
+        "regnet_y_32gf",
+        "regnet_y_128gf",
+        "resnext101_64x4d",
+        "wide_resnet101_2",
+        "densenet201",
     }
     if name not in supported:
         raise ValueError(f"Unsupported model {name!r}; choose one of {sorted(supported | {'tnet'})}")
 
-    weights = models.get_model_weights(name).DEFAULT if pretrained else None
-    model = models.get_model(name, weights=weights)
+    pretrained_source = str(model_config.get("pretrained_source", "imagenet"))
+    if pretrained and pretrained_source == "places365":
+        if name not in PLACES365_URLS:
+            raise ValueError(
+                f"Places365 pretraining is only configured for {sorted(PLACES365_URLS)}"
+            )
+        model = models.get_model(name, weights=None, num_classes=365)
+        checkpoint = torch.hub.load_state_dict_from_url(
+            PLACES365_URLS[name], map_location="cpu", progress=True
+        )
+        state_dict = checkpoint.get("state_dict", checkpoint)
+        state_dict = {
+            key.removeprefix("module."): value for key, value in state_dict.items()
+        }
+        model.load_state_dict(state_dict)
+    else:
+        weights = None
+        if pretrained:
+            if pretrained_source != "imagenet":
+                raise ValueError(f"Unknown pretrained_source: {pretrained_source}")
+            weights_enum = models.get_model_weights(name)
+            weights_name = model_config.get("weights")
+            weights = (
+                weights_enum[str(weights_name)] if weights_name else weights_enum.DEFAULT
+            )
+        model = models.get_model(name, weights=weights)
     head_parameters = _replace_classifier(model, num_classes)
     return model, head_parameters
 
@@ -94,4 +136,3 @@ def parameter_counts(model: nn.Module) -> tuple[int, int]:
     total = sum(parameter.numel() for parameter in model.parameters())
     trainable = sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
     return total, trainable
-

@@ -1,0 +1,35 @@
+experiment:
+  name: regnet_y_32gf_swag_finetune
+  seed: 0
+
+data:
+  root: dataset
+  train_dir: train
+  test_dir: test
+  split_file: splits/seed0_val20.json
+  val_fraction: 0.20
+  image_size: 384
+  resize_size: 384
+  color_mode: rgb
+  interpolation: bicubic
+  augmentation: basic
+  batch_size: 2
+  num_workers: 8
+
+model:
+  name: regnet_y_32gf
+  pretrained: true
+  weights: IMAGENET1K_SWAG_E2E_V1
+  freeze_backbone_epochs: 2
+
+train:
+  epochs: 30
+  optimizer: adamw
+  learning_rate: 0.000002
+  head_lr_multiplier: 40.0
+  weight_decay: 0.02
+  scheduler: cosine
+  label_smoothing: 0.05
+  amp: true
+  early_stopping_patience: 9
+

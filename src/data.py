@@ -25,6 +25,11 @@ def build_transforms(data_config: dict, training: bool) -> transforms.Compose:
     image_size = int(data_config["image_size"])
     color_mode = str(data_config.get("color_mode", "rgb"))
     augmentation = str(data_config.get("augmentation", "none"))
+    interpolation_name = str(data_config.get("interpolation", "bilinear")).upper()
+    try:
+        interpolation = transforms.InterpolationMode[interpolation_name]
+    except KeyError as error:
+        raise ValueError(f"Unknown interpolation mode: {interpolation_name}") from error
     operations: list = []
 
     if color_mode == "grayscale":
@@ -32,12 +37,16 @@ def build_transforms(data_config: dict, training: bool) -> transforms.Compose:
         if training and augmentation != "none":
             operations.extend(
                 [
-                    transforms.RandomResizedCrop(image_size, scale=(0.75, 1.0)),
+                    transforms.RandomResizedCrop(
+                        image_size, scale=(0.75, 1.0), interpolation=interpolation
+                    ),
                     transforms.RandomHorizontalFlip(),
                 ]
             )
         else:
-            operations.append(transforms.Resize((image_size, image_size)))
+            operations.append(
+                transforms.Resize((image_size, image_size), interpolation=interpolation)
+            )
         operations.extend(
             [transforms.ToTensor(), transforms.Normalize(mean=[0.5], std=[0.5])]
         )
@@ -46,10 +55,21 @@ def build_transforms(data_config: dict, training: bool) -> transforms.Compose:
     if color_mode != "rgb":
         raise ValueError("data.color_mode must be 'rgb' or 'grayscale'")
 
-    if training and augmentation == "basic":
+    if training and augmentation == "light":
         operations.extend(
             [
-                transforms.RandomResizedCrop(image_size, scale=(0.75, 1.0)),
+                transforms.RandomResizedCrop(
+                    image_size, scale=(0.85, 1.0), interpolation=interpolation
+                ),
+                transforms.RandomHorizontalFlip(),
+            ]
+        )
+    elif training and augmentation == "basic":
+        operations.extend(
+            [
+                transforms.RandomResizedCrop(
+                    image_size, scale=(0.75, 1.0), interpolation=interpolation
+                ),
                 transforms.RandomHorizontalFlip(),
                 transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
             ]
@@ -57,7 +77,9 @@ def build_transforms(data_config: dict, training: bool) -> transforms.Compose:
     elif training and augmentation == "strong":
         operations.extend(
             [
-                transforms.RandomResizedCrop(image_size, scale=(0.60, 1.0)),
+                transforms.RandomResizedCrop(
+                    image_size, scale=(0.60, 1.0), interpolation=interpolation
+                ),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomApply(
                     [
@@ -77,8 +99,15 @@ def build_transforms(data_config: dict, training: bool) -> transforms.Compose:
     elif training and augmentation != "none":
         raise ValueError(f"Unknown augmentation profile: {augmentation}")
     else:
-        resize_size = int(math.ceil(image_size / 0.875))
-        operations.extend([transforms.Resize(resize_size), transforms.CenterCrop(image_size)])
+        resize_size = int(
+            data_config.get("resize_size", math.ceil(image_size / 0.875))
+        )
+        operations.extend(
+            [
+                transforms.Resize(resize_size, interpolation=interpolation),
+                transforms.CenterCrop(image_size),
+            ]
+        )
 
     operations.extend(
         [
@@ -249,4 +278,3 @@ class FlatImageDataset(Dataset):
             image = image.convert("RGB")
             tensor = self.transform(image)
         return tensor, path.name
-

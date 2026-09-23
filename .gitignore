@@ -7,8 +7,12 @@ __pycache__/
 
 # Data and local download helpers
 data/
+data
+dataset/
+dataset
 dataset_download/
 .tools/
+backups/
 
 # Training outputs and large artifacts
 logs/
@@ -24,4 +28,5 @@ report/*.out
 
 # Course-provided source files kept locally, not republished
 ITCS_6169:8169_Assignment1.pdf
+ITCS_6169_8169_Assignment1.pdf
 ITCS_6169_8169_Assignment1_2026_Starter.ipynb
