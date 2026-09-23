@@ -120,7 +120,11 @@ def main() -> None:
         "accuracy": accuracy,
         "correct": correct,
         "total": total,
-        "checkpoint_best_val_accuracy": float(checkpoint["best_val_accuracy"]),
+        "checkpoint_best_val_accuracy": float(
+            checkpoint.get(
+                "best_val_accuracy", checkpoint.get("selection_val_accuracy", float("nan"))
+            )
+        ),
     }
     save_json(metrics, output_dir / "metrics.json")
     save_confusion_plot(confusion, class_names, output_dir / "confusion_matrix.png")
@@ -129,4 +133,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
