@@ -16,8 +16,9 @@ backups/
 
 # Training outputs and large artifacts
 logs/
-checkpoints/
 *.pt
+# The released final checkpoint is tracked with Git LFS
+!checkpoints/*.pt
 *.pth
 *.ckpt
 

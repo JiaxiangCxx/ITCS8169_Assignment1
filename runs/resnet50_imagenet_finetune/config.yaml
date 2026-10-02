@@ -1,0 +1,32 @@
+experiment:
+  name: resnet50_imagenet_finetune
+  seed: 0
+data:
+  root: dataset
+  train_dir: train
+  test_dir: test
+  split_file: splits/seed0_val20.json
+  val_fraction: 0.2
+  image_size: 224
+  resize_size: 256
+  color_mode: rgb
+  interpolation: bilinear
+  augmentation: light
+  batch_size: 32
+  num_workers: 8
+model:
+  name: resnet50
+  pretrained: true
+  pretrained_source: imagenet
+  weights: IMAGENET1K_V1
+  freeze_backbone_epochs: 2
+train:
+  epochs: 35
+  optimizer: adamw
+  learning_rate: 8.0e-06
+  head_lr_multiplier: 25.0
+  weight_decay: 0.01
+  scheduler: cosine
+  label_smoothing: 0.05
+  amp: true
+  early_stopping_patience: 10

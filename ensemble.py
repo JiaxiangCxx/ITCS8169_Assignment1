@@ -11,7 +11,8 @@ import torch
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets
 
-from src.data import build_transforms
+from evaluate import save_confusion_plot
+from src.data import FlatImageDataset, build_transforms
 from src.models import build_model, clone_model_config_without_pretraining
 from src.utils import resolve_device, save_json
 
@@ -23,7 +24,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--checkpoints", nargs="+", required=True)
     parser.add_argument("--weights", nargs="+", type=float)
     parser.add_argument("--data-root", default="dataset")
-    parser.add_argument("--split", choices=("val", "test"), default="val")
+    parser.add_argument(
+        "--split",
+        choices=("val", "test", "test2"),
+        default="val",
+        help="val/test are labeled; test2 is the unlabeled flat folder",
+    )
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--tta-horizontal", action="store_true")
     parser.add_argument("--device")
@@ -33,22 +39,27 @@ def parse_args() -> argparse.Namespace:
 def make_loader(config: dict, data_root: str, split: str):
     data_config = dict(config["data"])
     data_config["root"] = data_root
+    transform = build_transforms(data_config, training=False)
+    classes = None
     if split == "val":
         root = Path(data_root) / str(data_config.get("train_dir", "train"))
-        dataset = datasets.ImageFolder(
-            root, transform=build_transforms(data_config, training=False)
-        )
+        dataset = datasets.ImageFolder(root, transform=transform)
         with Path(data_config["split_file"]).open("r", encoding="utf-8") as stream:
             split_definition = json.load(stream)
         indices = list(split_definition["val_indices"])
         filenames = [str(Path(dataset.samples[index][0]).relative_to(root)) for index in indices]
         selected = Subset(dataset, indices)
-    else:
+        classes = dataset.classes
+    elif split == "test":
         root = Path(data_root) / str(data_config.get("test_dir", "test"))
-        dataset = datasets.ImageFolder(
-            root, transform=build_transforms(data_config, training=False)
-        )
+        dataset = datasets.ImageFolder(root, transform=transform)
         filenames = [str(Path(path).relative_to(root)) for path, _ in dataset.samples]
+        selected = dataset
+        classes = dataset.classes
+    else:
+        # Unlabeled flat folder: the loader yields file names instead of labels.
+        dataset = FlatImageDataset(Path(data_root) / split, transform=transform)
+        filenames = [path.name for path in dataset.paths]
         selected = dataset
     loader = DataLoader(
         selected,
@@ -57,7 +68,7 @@ def make_loader(config: dict, data_root: str, split: str):
         num_workers=int(data_config.get("num_workers", 4)),
         pin_memory=torch.cuda.is_available(),
     )
-    return loader, dataset.classes, filenames
+    return loader, classes, filenames
 
 
 @torch.inference_mode()
@@ -66,7 +77,7 @@ def predict_one(checkpoint_path: str, data_root: str, split: str, device, use_tt
     config = checkpoint["config"]
     loader, dataset_classes, filenames = make_loader(config, data_root, split)
     class_names = list(checkpoint["class_names"])
-    if dataset_classes != class_names:
+    if dataset_classes is not None and dataset_classes != class_names:
         raise RuntimeError(
             f"Class order mismatch for {checkpoint_path}: "
             f"checkpoint={class_names}, dataset={dataset_classes}"
@@ -87,11 +98,25 @@ def predict_one(checkpoint_path: str, data_root: str, split: str, device, use_tt
         if use_tta:
             current = (current + model(torch.flip(images, dims=[3])).softmax(dim=1)) / 2
         probabilities.append(current.cpu())
-        labels.append(targets)
+        if dataset_classes is not None:
+            labels.append(targets)
     del model
     if device.type == "cuda":
         torch.cuda.empty_cache()
-    return torch.cat(probabilities), torch.cat(labels), class_names, filenames
+    metadata = {
+        "checkpoint": str(Path(checkpoint_path).resolve()),
+        "model": config["model"]["name"],
+        "image_size": int(config["data"]["image_size"]),
+        "epoch": checkpoint.get("epoch"),
+        "best_val_accuracy": checkpoint.get("best_val_accuracy"),
+    }
+    return (
+        torch.cat(probabilities),
+        torch.cat(labels) if labels else None,
+        class_names,
+        filenames,
+        metadata,
+    )
 
 
 def main() -> None:
@@ -109,8 +134,8 @@ def main() -> None:
     filenames = None
     individual = []
     for path in args.checkpoints:
-        probabilities, current_labels, current_classes, current_filenames = predict_one(
-            path, args.data_root, args.split, device, args.tta_horizontal
+        probabilities, current_labels, current_classes, current_filenames, metadata = (
+            predict_one(path, args.data_root, args.split, device, args.tta_horizontal)
         )
         if labels is not None and not torch.equal(labels, current_labels):
             raise RuntimeError("Label order differs between checkpoints")
@@ -122,69 +147,74 @@ def main() -> None:
         class_names = current_classes
         filenames = current_filenames
         model_probabilities.append(probabilities)
-        individual.append(
-            {
-                "checkpoint": str(Path(path).resolve()),
-                "accuracy": float((probabilities.argmax(1) == labels).float().mean()),
-            }
-        )
+        if labels is not None:
+            metadata["accuracy"] = float((probabilities.argmax(1) == labels).float().mean())
+        individual.append(metadata)
 
-    assert labels is not None and class_names is not None and filenames is not None
+    assert class_names is not None and filenames is not None
     stacked = torch.stack(model_probabilities).to(torch.float64)
     ensemble_probabilities = (stacked * weight_tensor[:, None, None]).sum(dim=0)
     predictions = ensemble_probabilities.argmax(dim=1)
     confidence = ensemble_probabilities.max(dim=1).values
-    accuracy = float((predictions == labels).float().mean())
-    num_classes = len(class_names)
-    flat_indices = labels * num_classes + predictions
-    confusion = torch.bincount(flat_indices, minlength=num_classes**2).reshape(
-        num_classes, num_classes
-    )
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     metrics = {
         "split": args.split,
-        "accuracy": accuracy,
-        "correct": int((predictions == labels).sum()),
-        "total": len(labels),
+        "total": len(predictions),
         "tta_horizontal": args.tta_horizontal,
         "normalized_weights": weight_tensor.tolist(),
         "individual_models": individual,
     }
+    if labels is not None:
+        num_classes = len(class_names)
+        flat_indices = labels * num_classes + predictions
+        confusion = torch.bincount(flat_indices, minlength=num_classes**2).reshape(
+            num_classes, num_classes
+        ).numpy()
+        metrics["accuracy"] = float((predictions == labels).float().mean())
+        metrics["correct"] = int((predictions == labels).sum())
+        np.savetxt(output_dir / "confusion_matrix.csv", confusion, delimiter=",", fmt="%d")
+        save_confusion_plot(confusion, class_names, output_dir / "confusion_matrix.png")
+        with (output_dir / "per_class_accuracy.csv").open(
+            "w", encoding="utf-8", newline=""
+        ) as stream:
+            writer = csv.DictWriter(stream, fieldnames=("class", "correct", "total", "accuracy"))
+            writer.writeheader()
+            for index, name in enumerate(class_names):
+                class_total = int(confusion[index].sum())
+                writer.writerow(
+                    {
+                        "class": name,
+                        "correct": int(confusion[index, index]),
+                        "total": class_total,
+                        "accuracy": confusion[index, index] / class_total if class_total else 0.0,
+                    }
+                )
     save_json(metrics, output_dir / "metrics.json")
-    np.savetxt(
-        output_dir / "confusion_matrix.csv", confusion.numpy(), delimiter=",", fmt="%d"
-    )
+
+    fieldnames = ["filename", "predicted_class", "confidence"]
+    if labels is not None:
+        fieldnames += ["true_class", "correct"]
     with (output_dir / "predictions.csv").open(
         "w", encoding="utf-8", newline=""
     ) as stream:
-        writer = csv.DictWriter(
-            stream,
-            fieldnames=(
-                "filename",
-                "true_class",
-                "predicted_class",
-                "confidence",
-                "correct",
-            ),
-        )
+        writer = csv.DictWriter(stream, fieldnames=fieldnames)
         writer.writeheader()
-        for filename, target, prediction, score in zip(
-            filenames, labels, predictions, confidence
+        for index, (filename, prediction, score) in enumerate(
+            zip(filenames, predictions, confidence)
         ):
-            writer.writerow(
-                {
-                    "filename": filename,
-                    "true_class": class_names[int(target)],
-                    "predicted_class": class_names[int(prediction)],
-                    "confidence": float(score),
-                    "correct": int(target == prediction),
-                }
-            )
+            row = {
+                "filename": filename,
+                "predicted_class": class_names[int(prediction)],
+                "confidence": float(score),
+            }
+            if labels is not None:
+                row["true_class"] = class_names[int(labels[index])]
+                row["correct"] = int(labels[index] == prediction)
+            writer.writerow(row)
     print(json.dumps(metrics, indent=2))
 
 
 if __name__ == "__main__":
     main()
-

@@ -20,7 +20,7 @@ echo "[$(date -Is)] Creating the shared stratified split"
 "$PYTHON_BIN" -c 'from src.data import make_train_val_loaders; from src.utils import load_config; c=load_config("configs/baseline_tnet.yaml"); _,_,names,info=make_train_val_loaders(c["data"], int(c["experiment"]["seed"])); print(names); print(info)'
 
 echo "[$(date -Is)] Downloading pretrained CNN weights once"
-"$PYTHON_BIN" -c 'from torchvision.models import ResNet18_Weights, EfficientNet_B0_Weights, resnet18, efficientnet_b0; resnet18(weights=ResNet18_Weights.DEFAULT); efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT); print("Pretrained weights ready")'
+"$PYTHON_BIN" -c 'from torchvision.models import ResNet18_Weights, resnet18; resnet18(weights=ResNet18_Weights.DEFAULT); print("Pretrained weights ready")'
 
 launch_experiment() {
   local session_name="$1"
@@ -43,7 +43,6 @@ launch_experiment a1_baseline 0 configs/baseline_tnet.yaml
 launch_experiment a1_linear 1 configs/resnet18_linear.yaml
 launch_experiment a1_basic 2 configs/resnet18_finetune_basic.yaml
 launch_experiment a1_strong 3 configs/resnet18_finetune_strong.yaml
-launch_experiment a1_efficient 4 configs/efficientnet_b0_finetune.yaml
 
 sleep 5
 echo "[$(date -Is)] Active screens"

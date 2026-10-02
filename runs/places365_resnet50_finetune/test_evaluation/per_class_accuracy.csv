@@ -1,0 +1,17 @@
+class,correct,total,accuracy
+Bedroom,25,25,1.0
+Coast,25,25,1.0
+Flower,25,25,1.0
+Forest,23,25,0.92
+Highway,25,25,1.0
+Industrial,21,25,0.84
+InsideCity,25,25,1.0
+Kitchen,22,25,0.88
+LivingRoom,23,25,0.92
+Mountain,21,25,0.84
+Office,25,25,1.0
+OpenCountry,25,25,1.0
+Store,22,25,0.88
+Street,25,25,1.0
+Suburb,25,25,1.0
+TallBuilding,25,25,1.0

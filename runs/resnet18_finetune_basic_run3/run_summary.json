@@ -1,0 +1,15 @@
+{
+  "augmentation": "basic",
+  "best_epoch": 15,
+  "best_val_accuracy": 0.9041666666666667,
+  "elapsed_seconds": 102.64775109291077,
+  "epochs_completed": 23,
+  "experiment": "resnet18_finetune_basic_run3",
+  "image_size": 224,
+  "model": "resnet18",
+  "pretrained": true,
+  "seed": 0,
+  "split_file": "splits/seed0_val20.json",
+  "train_size": 1920,
+  "val_size": 480
+}

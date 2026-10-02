@@ -13,7 +13,7 @@ data:
   color_mode: rgb
   interpolation: bilinear
   augmentation: light
-  batch_size: 64
+  batch_size: 32
   num_workers: 8
 
 model:
@@ -25,8 +25,8 @@ model:
 train:
   epochs: 35
   optimizer: adamw
-  learning_rate: 0.00001
-  head_lr_multiplier: 20.0
+  learning_rate: 0.000008
+  head_lr_multiplier: 25.0
   weight_decay: 0.01
   scheduler: cosine
   label_smoothing: 0.05

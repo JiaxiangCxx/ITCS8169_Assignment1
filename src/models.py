@@ -38,13 +38,6 @@ def _replace_classifier(model: nn.Module, num_classes: int) -> list[nn.Parameter
         model.fc = nn.Linear(model.fc.in_features, num_classes)
         return list(model.fc.parameters())
 
-    if hasattr(model, "classifier") and isinstance(model.classifier, nn.Sequential):
-        for index in range(len(model.classifier) - 1, -1, -1):
-            layer = model.classifier[index]
-            if isinstance(layer, nn.Linear):
-                model.classifier[index] = nn.Linear(layer.in_features, num_classes)
-                return list(model.classifier[index].parameters())
-
     raise ValueError(f"Unsupported classifier layout: {type(model).__name__}")
 
 
@@ -63,25 +56,7 @@ def build_model(
         model = TNet(num_classes=num_classes, image_size=image_size)
         return model, list(model.classifier.parameters())
 
-    supported = {
-        "resnet18",
-        "resnet50",
-        "efficientnet_b0",
-        "efficientnet_v2_s",
-        "efficientnet_v2_m",
-        "efficientnet_v2_l",
-        "mobilenet_v3_small",
-        "convnext_tiny",
-        "convnext_small",
-        "convnext_base",
-        "convnext_large",
-        "regnet_y_16gf",
-        "regnet_y_32gf",
-        "regnet_y_128gf",
-        "resnext101_64x4d",
-        "wide_resnet101_2",
-        "densenet201",
-    }
+    supported = {"resnet18", "resnet50"}
     if name not in supported:
         raise ValueError(f"Unsupported model {name!r}; choose one of {sorted(supported | {'tnet'})}")
 

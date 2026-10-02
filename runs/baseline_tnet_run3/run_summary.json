@@ -1,0 +1,15 @@
+{
+  "augmentation": "none",
+  "best_epoch": 7,
+  "best_val_accuracy": 0.45416666666666666,
+  "elapsed_seconds": 34.440935373306274,
+  "epochs_completed": 20,
+  "experiment": "baseline_tnet_run3",
+  "image_size": 64,
+  "model": "tnet",
+  "pretrained": false,
+  "seed": 0,
+  "split_file": "splits/seed0_val20.json",
+  "train_size": 1920,
+  "val_size": 480
+}

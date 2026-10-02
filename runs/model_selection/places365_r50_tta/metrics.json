@@ -1,0 +1,20 @@
+{
+  "accuracy": 0.956250011920929,
+  "correct": 459,
+  "individual_models": [
+    {
+      "accuracy": 0.956250011920929,
+      "best_val_accuracy": 0.9604166666666667,
+      "checkpoint": "/net/projects/cci-abc/HPDiL/jzhang84/assignment1/runs/places365_resnet50_finetune/best.pt",
+      "epoch": 15,
+      "image_size": 224,
+      "model": "resnet50"
+    }
+  ],
+  "normalized_weights": [
+    1.0
+  ],
+  "split": "val",
+  "total": 480,
+  "tta_horizontal": true
+}

@@ -34,6 +34,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-root", help="Override data.root")
     parser.add_argument("--runs-root", default="runs")
     parser.add_argument("--device", help="For example cuda, cuda:0, or cpu")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Override experiment.seed; the validation split stays fixed",
+    )
     return parser.parse_args()
 
 
@@ -159,6 +164,11 @@ def main() -> None:
         config["experiment"]["name"] = args.run_name
     if args.data_root:
         config["data"]["root"] = args.data_root
+    if args.seed is not None:
+        config["data"].setdefault(
+            "split_seed", int(config["experiment"].get("seed", 0))
+        )
+        config["experiment"]["seed"] = args.seed
 
     run_name = str(config["experiment"]["name"])
     run_dir = Path(args.runs_root) / run_name

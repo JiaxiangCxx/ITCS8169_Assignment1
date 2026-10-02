@@ -2,96 +2,169 @@
 \usepackage[letterpaper,margin=0.58in]{geometry}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage[font=small,skip=2pt]{caption}
 \usepackage{xcolor}
 \usepackage{microtype}
-\usepackage{hyperref}
+\usepackage[colorlinks=true,urlcolor=blue!60!black,linkcolor=black]{hyperref}
 \usepackage{enumitem}
 \setlist{nosep,leftmargin=*}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{3pt}
-\newcommand{\todo}[1]{\textcolor{red}{[REPLACE: #1]}}
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{5pt}{2pt}
+\titleformat*{\section}{\normalsize\bfseries}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
-\title{\vspace{-1.3em}ITCS 6169/8169 Assignment 1: The CNN Challenge}
-\author{\todo{Name}}
+\title{\vspace{-1.8em}ITCS 8169 Assignment 1: The CNN Challenge}
+\author{Jiaxiang Zhang}
 \date{}
 
 \begin{document}
 \maketitle
-\vspace{-2.1em}
+\vspace{-2.9em}
 
-\textbf{Code and checkpoint.}
-\href{https://github.com/REPLACE/REPLACE}{GitHub repository}\todo{replace URL}.
-The repository contains
-the exact configuration, split, code, environment record, and checkpoint used
-for the result below.
+\textbf{Code:} \url{https://github.com/JiaxiangCxx/ITCS8169_Assignment1}\\
+\textbf{Final checkpoint:} \texttt{checkpoints/places365\_resnet50\_final.pt}
+(in the repository, with the configs, split and logs of every run).
 
-\section*{Final result and validation strategy}
-The selected model achieved \textbf{\todo{test accuracy}} on the labeled test
-set. It was selected using a fixed, class-stratified 80/20 split of the 2,400
-provided training images (1,920 train and 480 validation images; seed 0). The
-selected checkpoint obtained \textbf{\todo{validation accuracy}} validation
-accuracy at epoch \todo{best epoch}. The test set was not used for model or
-hyperparameter selection.
+\section*{1. Final result}
+\textbf{Test accuracy: 95.5\% (382/400)} with a single ResNet-50 pretrained on
+Places365 and fine-tuned on our data. The test set was used once, after the
+model was chosen.
 
-\section*{Final recipe}
-The final classifier was \todo{CNN architecture} initialized from
-\todo{pretraining dataset or ``random initialization''}. Images were processed
-at \todo{resolution} using \todo{augmentation summary}. I trained with
-\todo{optimizer}, batch size \todo{batch size}, initial backbone/head learning
-rates \todo{learning rates}, \todo{schedule}, weight decay \todo{weight decay},
-and label smoothing \todo{value}. \todo{Explain which one or two choices mattered
-most, using validation evidence rather than listing settings.}
+\emph{Validation.} The 2,400 training images were split once into 1,920 for
+training and 480 for validation (stratified, 30 per class, seed 0;
+\texttt{splits/seed0\_val20.json}). Every run uses this split, and all choices
+were made on it. The selected checkpoint (epoch 15) gets \textbf{96.0\%} on
+validation (461/480; 460/480 when re-evaluated in fp32, the precision used for
+the test result). One validation image is 0.2 points and the standard error
+is about 0.9 points, so differences of one or two images are treated as noise.
 
-\section*{Experimental journey}
+\section*{2. Recipe and what mattered}
+\begin{itemize}
+\item \textbf{Model:} torchvision ResNet-50~[1] (23.5M parameters, 4.1 GFLOPs)
+  with the CSAILVision Places365 weights~[2] and a new 16-class linear head. The
+  backbone is frozen for 2 epochs, then all layers are trained.
+\item \textbf{Data:} $224\times224$ RGB input. The 15 grayscale 15-Scene
+  classes~[3] are copied to three channels; Flower is the only color class.
+  Training augmentation: random resized crop (scale 0.85--1) and horizontal
+  flip. Evaluation: resize to 256, center crop 224.
+\item \textbf{Training:} AdamW~[4]; learning rate $8\times10^{-6}$ (backbone)
+  and $2\times10^{-4}$ (head); weight decay 0.01; cosine schedule over 35
+  epochs; batch 32; mixed precision; cross-entropy with label smoothing
+  0.05~[5]. Training stops after 10 epochs without improvement and keeps the
+  best validation checkpoint (25 epochs, 2.8 min on one Quadro RTX 5000). I
+  call this recipe R.
+\end{itemize}
+\textbf{What mattered.} (1)~\emph{Pretraining data.} With recipe R fixed,
+Places365 weights give 96.0\% and ImageNet weights 92.1\%. On the same 480
+images, 22 were fixed and 4 broken (McNemar $p=5\times10^{-4}$~[6]). All three
+Places365 seeds (96.0, 95.4, 95.8\%) stay far above the ImageNet run. Places365
+has classes close to ours (bedroom, kitchen, coast, highway, skyscraper), and
+even a Places365 ResNet-18 (94.2\%) beats the ImageNet ResNet-50.
+(2)~\emph{Fine-tuning.} ResNet-18 gets 80.4\% from scratch and 80.2\% with a
+frozen ImageNet backbone, but 90.4\% when fine-tuned (Fig.~\ref{fig:curves}a).
+(3)~\emph{Depth.} With Places365 weights, ResNet-50 is 1.6 points better than
+ResNet-18 (three-seed mean) for 2.3$\times$ the FLOPs. (4)~\emph{No gain:}
+strong augmentation (Section~4) and flip test-time augmentation (one image
+worse). The learning rates, frozen warm-up and label smoothing were not tested
+separately.
+
+\begin{figure}[b]
+\centering
+\includegraphics[width=\linewidth]{figures/curves.pdf}
+\caption{Accuracy per epoch on the validation split (dots: selected epoch).
+(a)~Every model reaches about 100\% training accuracy (dashed); they differ on
+validation (solid). (b)~Same ResNet-50 recipe with different pretraining data.}
+\label{fig:curves}
+\end{figure}
+
+\section*{3. Experimental journey}
+\vspace{-3pt}
 \begin{center}
-\small
-\begin{tabularx}{\linewidth}{@{}lXrr@{}}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}lrY@{}}
 \toprule
-Experiment & Controlled change and observation & Val. acc. & Time \\
+Experiment & Val.\ acc.\ (\%) & Observation \\
 \midrule
-Starter TNet & Grayscale $64\times64$ sanity-check baseline. & \todo{--} & \todo{--} \\
-Linear probe & ImageNet ResNet-18; classifier trained with frozen backbone. & \todo{--} & \todo{--} \\
-Fine-tuning & Unfroze backbone after three epochs; basic augmentation. & \todo{--} & \todo{--} \\
-Augmentation & Changed only the augmentation profile from basic to strong. & \todo{--} & \todo{--} \\
-Final model & \todo{Final architecture/change and concise observation.} & \todo{--} & \todo{--} \\
+Starter TNet (grayscale $64^2$, one conv layer) & 45.4 & 99\% train acc.; val.\ loss rises after epoch 6 \\
+ResNet-18, random init, RGB $224^2$ & 80.4 & Better, but a 20-point train--val.\ gap \\
+ResNet-18, ImageNet, frozen backbone & 80.2 & Underfits (88\% train acc.) \\
+ResNet-18, ImageNet, fine-tuned & 90.4 & +10 points over both \\
+\quad + strong augmentation & 90.8 & +2 images (noise) \\
+ResNet-50, ImageNet, recipe R & 92.1 & Baseline for the next row \\
+\textbf{ResNet-50, Places365, recipe R (final)} & \textbf{96.0} & Only the pretraining changed: +4.0 points \\
+\quad seeds 1 and 2 & 95.4 / 95.8 & Three-seed mean 95.8 \\
+\quad + strong augmentation & 94.8 & $-$6 images \\
+\quad + flip TTA (fp32) & 95.6 & $-$1 image vs.\ fp32 without TTA; not used \\
+ResNet-18, Places365, recipe R & 94.2 & 0.44$\times$ the FLOPs, 1.6 points lower \\
 \bottomrule
 \end{tabularx}
 \end{center}
+\vspace{-3pt}
+The first runs measured what pretraining and fine-tuning are worth on
+ResNet-18. Later runs changed one thing at a time: pretraining data,
+augmentation, test-time flipping, depth and seed. Seed 0 of the final recipe was
+selected before the seed runs and is the best of the three, so the three-seed
+mean (95.8\%) is the fairer validation estimate.
 
-\section*{Failure analysis}
-I expected \todo{failed experiment} to help because \todo{hypothesis}. Instead,
-validation accuracy \todo{what happened}, while the learning curves showed
-\todo{diagnostic evidence}. This suggests \todo{lesson and resulting decision}.
-This experiment was not selected based on its test-set behavior.
+\section*{4. Failure analysis: strong augmentation}
+\emph{Tried:} a strong augmentation profile (crops down to 60\% of the image,
+color jitter with $p=0.8$, random grayscale, $\pm10^\circ$ rotation) on
+ResNet-18 and on the final ResNet-50.
+\emph{Why:} every fine-tuned model reached about 100\% training accuracy while
+validation was much lower (90\% for ResNet-18), which looked like overfitting.
+\emph{Result:} ResNet-18 gained 2 validation images (noise). The Places365
+ResNet-50 fell from 96.0\% to 94.8\% ($-$6 images, below all three seeds) and
+still reached 98--99\% training accuracy.
+\emph{Lesson:} 15 of the 16 classes are grayscale, so color jitter and random
+grayscale do nothing for them. Small crops can cut out the layout that
+identifies a scene (horizon, ceiling, room corners). The remaining errors are
+between similar scenes, which augmentation does not fix. Better pretraining
+closed the gap; extra regularization did not.
 
-\section*{Error analysis}
-The final confusion matrix showed that \todo{difficult/confused classes and
-counts}. Visual inspection suggests \todo{plausible image-level reason}. A
-remaining limitation is \todo{limitation}, which could be tested in future work
-with \todo{controlled follow-up}.
+\textbf{Test errors (18).} Mountain$\to$OpenCountry (3); Forest$\to$OpenCountry,
+Kitchen$\to$LivingRoom, LivingRoom$\to$Bedroom and Store$\to$Bedroom (2 each).
+Industrial is the hardest class (84\%), with errors spread over four classes.
+Flower is 100\% because it is the only color class, a property of the dataset
+rather than the model.
 
-\section*{AI + human}
-\todo{One example where an AI coding assistant helped and one where my
-judgment was needed.}
+\section*{5. AI + human}
+I used OpenAI Codex and Claude Code (details in \texttt{AI\_USAGE.md}).
+\emph{Where AI helped:} Codex wrote the reproducible pipeline (fixed split,
+separate train/validation transforms, best-checkpoint logging), and Claude Code
+suggested comparing ImageNet and Places365 weights under one recipe.
+\emph{Where I disagreed:} Claude Code recommended an ensemble of several models
+as the final model (about one point higher validation accuracy for about
+27$\times$ the compute). I chose the single Places365 ResNet-50.
 
-\section*{Reproducibility}
-The final run can be reproduced with:
+\section*{6. Reproducibility}
+Seed 0, deterministic cuDNN, Python 3.13.9, PyTorch 2.8.0, torchvision 0.23.0,
+one Quadro RTX 5000. Re-running the first command reproduced the original run
+exactly (same per-epoch metrics and weights); the second reproduces the test
+result.
+\vspace{-4pt}
+{\footnotesize
 \begin{verbatim}
-python train.py --config configs/FINAL_CONFIG.yaml
-python evaluate.py --checkpoint runs/FINAL/best.pt \
-  --data-root data --output-dir runs/FINAL/test_evaluation
-\end{verbatim}
-Software versions, seed, class order, resolved configuration, and split indices
-are stored with the run artifacts.
+python train.py --config configs/best.yaml
+python evaluate.py --checkpoint checkpoints/places365_resnet50_final.pt \
+    --data-root dataset --output-dir runs/final_test_evaluation
+\end{verbatim}}
 
 \newpage
 \section*{References}
 \small
-K. He et al., ``Deep Residual Learning for Image Recognition,'' CVPR, 2016.
+[1] K. He, X. Zhang, S. Ren, J. Sun. Deep residual learning for image recognition. CVPR, 2016.
 
-M. Tan and Q. Le, ``EfficientNet: Rethinking Model Scaling for Convolutional
-Neural Networks,'' ICML, 2019.
+[2] B. Zhou, A. Lapedriza, A. Khosla, A. Oliva, A. Torralba. Places: A 10 million image database for scene recognition. IEEE TPAMI, 2018. Weights: \url{http://places2.csail.mit.edu/models_places365/}.
 
-PyTorch and torchvision documentation, versions recorded in the repository.
+[3] S. Lazebnik, C. Schmid, J. Ponce. Beyond bags of features: Spatial pyramid matching for recognizing natural scene categories. CVPR, 2006.
+
+[4] I. Loshchilov, F. Hutter. Decoupled weight decay regularization. ICLR, 2019.
+
+[5] C. Szegedy, V. Vanhoucke, S. Ioffe, J. Shlens, Z. Wojna. Rethinking the Inception architecture for computer vision. CVPR, 2016.
+
+[6] Q. McNemar. Note on the sampling error of the difference between correlated proportions or percentages. Psychometrika, 1947.
 
 \end{document}

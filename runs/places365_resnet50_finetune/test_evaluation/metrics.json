@@ -1,0 +1,9 @@
+{
+  "accuracy": 0.955,
+  "checkpoint": "/net/projects/cci-abc/HPDiL/jzhang84/assignment1/runs/places365_resnet50_finetune/best.pt",
+  "checkpoint_best_val_accuracy": 0.9604166666666667,
+  "correct": 382,
+  "loss": 0.17747722804546356,
+  "split": "test",
+  "total": 400
+}

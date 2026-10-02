@@ -1,0 +1,28 @@
+experiment:
+  name: baseline_tnet_run3
+  seed: 0
+data:
+  root: data
+  train_dir: train
+  test_dir: test
+  split_file: splits/seed0_val20.json
+  val_fraction: 0.2
+  image_size: 64
+  color_mode: grayscale
+  augmentation: none
+  batch_size: 64
+  num_workers: 8
+model:
+  name: tnet
+  pretrained: false
+  freeze_backbone_epochs: 0
+train:
+  epochs: 20
+  optimizer: adam
+  learning_rate: 0.002
+  head_lr_multiplier: 1.0
+  weight_decay: 0.0
+  scheduler: none
+  label_smoothing: 0.0
+  amp: true
+  early_stopping_patience: 0

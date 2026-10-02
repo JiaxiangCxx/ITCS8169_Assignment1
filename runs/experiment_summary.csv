@@ -1,0 +1,13 @@
+experiment,model,pretrained,augmentation,image_size,seed,epochs_completed,best_epoch,best_val_accuracy,elapsed_seconds,train_size,val_size,summary_path,split_file
+baseline_tnet_run3,tnet,False,none,64,0,20,7,0.45416666666666666,34.440935373306274,1920,480,runs/baseline_tnet_run3/run_summary.json,splits/seed0_val20.json
+best_places365_resnet50,resnet50,True,light,224,0,25,15,0.9604166666666667,158.31931567192078,1920,480,runs/best_places365_resnet50/run_summary.json,splits/seed0_val20.json
+places365_resnet18_finetune,resnet18,True,light,224,0,28,18,0.9416666666666667,96.4894289970398,1920,480,runs/places365_resnet18_finetune/run_summary.json,splits/seed0_val20.json
+places365_resnet50_finetune,resnet50,True,light,224,0,25,15,0.9604166666666667,168.89226007461548,1920,480,runs/places365_resnet50_finetune/run_summary.json,splits/seed0_val20.json
+places365_resnet50_finetune_seed1,resnet50,True,light,224,1,15,5,0.9541666666666667,98.93139576911926,1920,480,runs/places365_resnet50_finetune_seed1/run_summary.json,splits/seed0_val20.json
+places365_resnet50_finetune_seed2,resnet50,True,light,224,2,26,16,0.9583333333333334,170.1322808265686,1920,480,runs/places365_resnet50_finetune_seed2/run_summary.json,splits/seed0_val20.json
+places365_resnet50_strong,resnet50,True,strong,224,0,23,13,0.9479166666666666,156.62538886070251,1920,480,runs/places365_resnet50_strong/run_summary.json,splits/seed0_val20.json
+resnet18_finetune_basic_run3,resnet18,True,basic,224,0,23,15,0.9041666666666667,102.64775109291077,1920,480,runs/resnet18_finetune_basic_run3/run_summary.json,splits/seed0_val20.json
+resnet18_finetune_strong_run3,resnet18,True,strong,224,0,30,22,0.9083333333333333,134.45592594146729,1920,480,runs/resnet18_finetune_strong_run3/run_summary.json,splits/seed0_val20.json
+resnet18_linear_run3,resnet18,True,basic,224,0,12,9,0.8020833333333334,54.05837392807007,1920,480,runs/resnet18_linear_run3/run_summary.json,splits/seed0_val20.json
+resnet18_scratch,resnet18,False,basic,224,0,80,69,0.8041666666666667,331.7761800289154,1920,480,runs/resnet18_scratch/run_summary.json,splits/seed0_val20.json
+resnet50_imagenet_finetune,resnet50,True,light,224,0,25,15,0.9208333333333333,163.6432225704193,1920,480,runs/resnet50_imagenet_finetune/run_summary.json,splits/seed0_val20.json

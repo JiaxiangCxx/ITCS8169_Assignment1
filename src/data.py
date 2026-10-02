@@ -202,11 +202,13 @@ def make_train_val_loaders(
     if training_dataset.class_to_idx != validation_dataset.class_to_idx:
         raise RuntimeError("Training and validation class mappings differ")
 
+    # The split seed is separate from the training seed so that seed-variance
+    # runs are evaluated on exactly the same validation images.
     train_indices, val_indices = load_or_create_split(
         validation_dataset,
         split_file=data_config["split_file"],
         val_fraction=float(data_config["val_fraction"]),
-        seed=seed,
+        seed=int(data_config.get("split_seed", seed)),
     )
     generator = torch.Generator().manual_seed(seed)
     loader_arguments = {

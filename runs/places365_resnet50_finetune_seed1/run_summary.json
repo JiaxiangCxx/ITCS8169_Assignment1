@@ -1,0 +1,15 @@
+{
+  "augmentation": "light",
+  "best_epoch": 5,
+  "best_val_accuracy": 0.9541666666666667,
+  "elapsed_seconds": 98.93139576911926,
+  "epochs_completed": 15,
+  "experiment": "places365_resnet50_finetune_seed1",
+  "image_size": 224,
+  "model": "resnet50",
+  "pretrained": true,
+  "seed": 1,
+  "split_file": "splits/seed0_val20.json",
+  "train_size": 1920,
+  "val_size": 480
+}

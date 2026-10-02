@@ -1,0 +1,28 @@
+experiment:
+  name: resnet18_scratch
+  seed: 0
+data:
+  root: dataset
+  train_dir: train
+  test_dir: test
+  split_file: splits/seed0_val20.json
+  val_fraction: 0.2
+  image_size: 224
+  color_mode: rgb
+  augmentation: basic
+  batch_size: 64
+  num_workers: 8
+model:
+  name: resnet18
+  pretrained: false
+  freeze_backbone_epochs: 0
+train:
+  epochs: 80
+  optimizer: adamw
+  learning_rate: 0.001
+  head_lr_multiplier: 1.0
+  weight_decay: 0.05
+  scheduler: cosine
+  label_smoothing: 0.1
+  amp: true
+  early_stopping_patience: 0

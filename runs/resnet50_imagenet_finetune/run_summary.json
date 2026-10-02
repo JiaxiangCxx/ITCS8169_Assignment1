@@ -1,0 +1,15 @@
+{
+  "augmentation": "light",
+  "best_epoch": 15,
+  "best_val_accuracy": 0.9208333333333333,
+  "elapsed_seconds": 163.6432225704193,
+  "epochs_completed": 25,
+  "experiment": "resnet50_imagenet_finetune",
+  "image_size": 224,
+  "model": "resnet50",
+  "pretrained": true,
+  "seed": 0,
+  "split_file": "splits/seed0_val20.json",
+  "train_size": 1920,
+  "val_size": 480
+}
